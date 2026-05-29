@@ -1,0 +1,72 @@
+groups:
+  - name: slo.insurance
+    interval: 30s
+    rules:
+
+      # Fast burn — claims-api burning budget 10x faster than allowed
+      - alert: ClaimsAPIFastBurnRate
+        expr: slo_burn_rate{service="claims-api"} > 10
+        for: 2m
+        labels:
+          severity: critical
+          service: claims-api
+          team: platform-sre
+        annotations:
+          summary: "claims-api burning error budget at {{ $value | humanize }}x rate"
+          description: >
+            claims-api error budget is being consumed {{ $value | humanize }}x faster
+            than the SLO allows. Immediate investigation required.
+
+      # Slow burn — less urgent but budget will exhaust before month end
+      - alert: ClaimsAPISlowBurnRate
+        expr: slo_burn_rate{service="claims-api"} > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: claims-api
+          team: platform-sre
+        annotations:
+          summary: "claims-api slow burn — budget will exhaust early"
+          description: >
+            claims-api is burning error budget at {{ $value | humanize }}x the
+            allowed rate. Budget will be exhausted before end of month.
+
+      # Error budget nearly exhausted
+      - alert: ClaimsAPIBudgetExhausted
+        expr: slo_error_budget_remaining_ratio{service="claims-api"} < 0.10
+        for: 5m
+        labels:
+          severity: critical
+          service: claims-api
+          team: platform-sre
+        annotations:
+          summary: "claims-api error budget below 10%"
+          description: >
+            Only {{ $value | humanizePercentage }} of the monthly error budget
+            remains for claims-api. Consider a feature freeze.
+
+      # policy-service latency SLO breach
+      - alert: PolicyServiceLatencyBreach
+        expr: slo_latency_p99_ms{service="policy-service"} > 500
+        for: 3m
+        labels:
+          severity: warning
+          service: policy-service
+          team: platform-sre
+        annotations:
+          summary: "policy-service p99 latency exceeding SLO target"
+          description: >
+            p99 latency is {{ $value | humanize }}ms against a 500ms SLO target.
+
+      # Availability below SLO target
+      - alert: ServiceAvailabilityBelow SLO
+        expr: slo_availability_ratio < slo_availability_target
+        for: 5m
+        labels:
+          severity: critical
+          team: platform-sre
+        annotations:
+          summary: "{{ $labels.service }} availability below SLO target"
+          description: >
+            {{ $labels.service }} availability is {{ $value | humanizePercentage }},
+            which is below the configured SLO target.

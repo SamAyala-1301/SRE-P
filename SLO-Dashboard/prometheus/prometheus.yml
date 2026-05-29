@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: production
+    domain: insurance
+
+# --- Alerting rules ---
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+
+  # Scrape our insurance metrics exporter
+  - job_name: insurance-slo-exporter
+    static_configs:
+      - targets:
+          - exporter:8000
+        labels:
+          team: platform-sre
+          domain: insurance
+
+  # Scrape Prometheus itself (good practice, shows up in Grafana)
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
